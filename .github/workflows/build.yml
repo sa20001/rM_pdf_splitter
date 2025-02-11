@@ -30,7 +30,10 @@ jobs:
           .venv\Scripts\python -m pip install pyinstaller
 
       - name: Build EXE using .spec file
-        run: .venv\Scripts\pyinstaller pdf_splitter.spec
+        run: |
+          .venv\Scripts\pyinstaller pdf_splitter.spec
+          if not exist dist\pdf_splitter.exe exit 1
+          dir dist  
         shell: cmd
 
       - name: Upload EXE as Artifact
