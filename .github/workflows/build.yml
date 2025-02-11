@@ -1,10 +1,10 @@
 name: Build EXE and Release
 
 on:
+  workflow_dispatch:  # For manual trigger from GitHub Actions UI
   push:
     tags:
       - "v*.*.*"  # Triggers when a tag like v1.0.0 is pushed
-    workflow_dispatch:  # For manual trigger from GitHub Actions UI
 
 jobs:
   build:
@@ -25,15 +25,12 @@ jobs:
       - name: Install Dependencies
         run: |
           python -m venv .venv
-          .venv\Scripts\activate
-          python -m pip install --upgrade pip
-          pip install -r requirements.txt
-          pip install pyinstaller
+          .venv\Scripts\python -m pip install --upgrade pip
+          .venv\Scripts\python -m pip install -r requirements.txt
+          .venv\Scripts\python -m pip install pyinstaller
 
       - name: Build EXE using .spec file
-        run: |
-          .venv\Scripts\activate
-          pyinstaller pdf_splitter.spec
+        run: .venv\Scripts\pyinstaller pdf_splitter.spec
         shell: cmd
 
       - name: Upload EXE as Artifact
