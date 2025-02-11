@@ -10,6 +10,9 @@ jobs:
   build:
     runs-on: windows-latest  # Use Windows to compile the EXE
 
+    permissions:
+      contents: write  # This allows GitHub Actions to create releases
+
     steps:
       - name: Checkout Repository
         uses: actions/checkout@v4
