@@ -1,0 +1,47 @@
+name: Build EXE and Release
+
+on:
+  push:
+    tags:
+      - "v*.*.*"  # Triggers when a tag like v1.0.0 is pushed
+    workflow_dispatch:  # For manual trigger from GitHub Actions UI
+
+jobs:
+  build:
+    runs-on: windows-latest  # Use Windows to compile the EXE
+
+    steps:
+      - name: Checkout Repository
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v4
+        with:
+          python-version: "3.10.11"
+
+      - name: Install Dependencies
+        run: |
+          python -m venv .venv
+          .venv\Scripts\activate
+          python -m pip install --upgrade pip
+          pip install -r requirements.txt
+          pip install pyinstaller
+
+      - name: Build EXE using .spec file
+        run: |
+          .venv\Scripts\activate
+          pyinstaller pdf_splitter.spec
+        shell: cmd
+
+      - name: Upload EXE as Artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: pdf_splitter_exe
+          path: dist/pdf_splitter.exe
+
+      - name: Create GitHub Release
+        uses: softprops/action-gh-release@v2
+        with:
+          files: dist/pdf_splitter.exe
+          token: ${{ secrets.GITHUB_TOKEN }}
+        if: startsWith(github.ref, 'refs/tags/')
