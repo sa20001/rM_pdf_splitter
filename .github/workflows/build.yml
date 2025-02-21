@@ -28,14 +28,14 @@ jobs:
           python -m pip install --upgrade pip
           pip install -r requirements.txt
           pip install pyinstaller
-        shell: cmd
+        shell: pwsh
 
       - name: Build EXE using .spec file
         run: |
           .venv\Scripts\activate
           pyinstaller pdf_splitter.spec
-          dir
-        shell: cmd
+          Get-ChildItem -Path dist -Recurse
+        shell: pwsh
 
       - name: Upload EXE as Artifact
         uses: actions/upload-artifact@v4
