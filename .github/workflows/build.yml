@@ -45,9 +45,21 @@ jobs:
           path: ${{ github.workspace }}/dist/pdf_splitter.exe
 
       - name: Create GitHub Release
+        id: create_release  # Add an ID to reference the upload URL
         uses: softprops/action-gh-release@v2
         with:
-          files: dist/pdf_splitter.exe
+          token: ${{ secrets.GITHUB_TOKEN }}
+          tag_name: ${{ github.ref_name }}
+          name: Release ${{ github.ref_name }}
+          draft: false
+          prerelease: false
+
+      - name: Upload EXE to Release
+        uses: actions/upload-release-asset@v1
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-        if: startsWith(github.ref, 'refs/tags/')
+        with:
+          upload_url: ${{ steps.create_release.outputs.upload_url }}
+          asset_path: dist/pdf_splitter/pdf_splitter.exe  # Adjust path as needed
+          asset_name: pdf_splitter.exe
+          asset_content_type: application/octet-stream
