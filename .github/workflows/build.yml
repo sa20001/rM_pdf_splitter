@@ -35,11 +35,13 @@ jobs:
           pyinstaller pdf_splitter.spec
           echo "Listing workspace contents:"
           dir /s
+          dir /s
         shell: cmd
 
       - name: Upload EXE as Artifact
         uses: actions/upload-artifact@v4
         with:
+          if-no-files-found: error
           name: pdf_splitter_exe
           path: ${{ github.workspace }}/dist/pdf_splitter.exe
 
