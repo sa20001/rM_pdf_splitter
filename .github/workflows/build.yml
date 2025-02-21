@@ -34,8 +34,8 @@ jobs:
         run: |
           .venv\Scripts\activate
           pyinstaller pdf_splitter.spec
-          Get-ChildItem -Path dist -Recurse
-        shell: pwsh
+          dir
+        shell: cmd
 
       - name: Upload EXE as Artifact
         uses: actions/upload-artifact@v4
