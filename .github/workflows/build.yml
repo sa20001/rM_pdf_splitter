@@ -8,7 +8,8 @@ on:
 
 jobs:
   build:
-    runs-on: windows-latest  # Use Windows to compile the EXE
+    #runs-on: windows-latest  # Use Windows to compile the EXE
+    runs-on: self-hosted
 
     permissions:
       contents: write  # This allows GitHub Actions to create releases
