@@ -8,9 +8,7 @@ on:
 
 jobs:
   build:
-    #runs-on: windows-latest  # Use Windows to compile the EXE
-    runs-on: self-hosted
-
+    runs-on: windows-latest  # Use Windows to compile the EXE
     permissions:
       contents: write  # This allows GitHub Actions to create releases
 
@@ -43,7 +41,7 @@ jobs:
         uses: actions/upload-artifact@v4
         with:
           name: pdf_splitter_exe
-          path: dist/pdf_splitter.exe
+          path: ${{ github.workspace }}/dist/pdf_splitter.exe
 
       - name: Create GitHub Release
         uses: softprops/action-gh-release@v2
