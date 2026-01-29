@@ -6,16 +6,26 @@ from tqdm import tqdm
 import os
 import threading
 import sys
+import math
 
 def split_pdf(input_pdf, output_pdf, header_height, footer_height, display_pages, progress_var, progress_label):
     doc = fitz.open(input_pdf)
     output_doc = fitz.open()
 
-    a4_width, a4_height = 595, 842
-    content_height = a4_height - footer_height - header_height
+    # Convert header/footer from mm to points (1 mm = 72 / 25.4 points)
+    mm_to_pt = 72.0 / 25.4
+    header_height_pt = int(header_height * mm_to_pt)
+    footer_height_pt = int(footer_height * mm_to_pt)
+
+    a4_width, a4_height = 595, 842 # A4 size in points
+    content_height = a4_height - footer_height_pt - header_height_pt
+    if content_height <= 0:
+        messagebox.showerror("Error", "Header and footer are too large for an A4 page.")
+        return
     page_counter = 1
 
-    total_pages = sum((int(page.rect.height) // content_height + 1) * (int(page.rect.width) // a4_width + 1) for page in doc)
+    # Use math.ceil to compute exact number of tiles per page (no off-by-one)
+    total_pages = sum(math.ceil(page.rect.height / content_height) * math.ceil(page.rect.width / a4_width) for page in doc)
     progress_var.set(0)
 
     tqdm_disabled = not sys.stdout  # Disable tqdm if there's no console (for release build)
@@ -28,8 +38,18 @@ def split_pdf(input_pdf, output_pdf, header_height, footer_height, display_pages
             for y_offset in range(0, int(page_height), content_height):
                 for x_offset in range(0, int(page_width), a4_width):
                     crop_rect = fitz.Rect(x_offset, y_offset, min(x_offset + a4_width, page_width), min(y_offset + content_height, page_height))
+                    crop_w = crop_rect.width
+                    crop_h = crop_rect.height
+
+                    # Create A4 page and render the cropped region at its real size (avoid stretching).
                     new_page = output_doc.new_page(width=a4_width, height=a4_height)
-                    new_page.show_pdf_page(fitz.Rect(0, header_height, a4_width, header_height + content_height), doc, page.number, clip=crop_rect)
+
+                    # Center the crop horizontally and place it right below the header vertically
+                    x_dest = (a4_width - crop_w) / 2
+                    y_dest = header_height_pt
+                    dest_rect = fitz.Rect(x_dest, y_dest, x_dest + crop_w, y_dest + crop_h)
+
+                    new_page.show_pdf_page(dest_rect, doc, page.number, clip=crop_rect)
 
                     if display_pages:
                         text = f"Page {page_counter}/{total_pages}"
@@ -88,14 +108,14 @@ pdf_entry.dnd_bind('<<Drop>>', drop_pdf)
 browse_button = tk.Button(root, text="Browse", command=browse_pdf)
 browse_button.pack(pady=5)
 
-header_label = tk.Label(root, text="Header Height")
+header_label = tk.Label(root, text="Header Height (mm)")
 header_label.pack()
 header_entry = tk.Entry(root, textvariable=header_var, width=5)
 header_entry.pack()
 header_slider = tk.Scale(root, from_=0, to=200, orient="horizontal", variable=header_var, command=update_header_slider)
 header_slider.pack()
 
-footer_label = tk.Label(root, text="Footer Height")
+footer_label = tk.Label(root, text="Footer Height (mm)")
 footer_label.pack()
 footer_entry = tk.Entry(root, textvariable=footer_var, width=5)
 footer_entry.pack()
