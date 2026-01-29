@@ -56,6 +56,47 @@ A Python utility to split continuous pages from reMarkable PDF exports into sepa
 
 This project includes a GitHub Actions workflow to automatically bundle the Python code into an EXE file and upload it as a release.
 
+### Template
+The template use this formula to calculate the parameters
+$$
+\text{points} = \frac{\text{mm}*\text{DPI}}{25.4}
+$$
+
+## Template usage
+
+Follow these steps to install a template on your reMarkable device:
+
+1. SSH into the device (replace `rm2` with the host or user@ip if needed):
+
+```bash
+ssh rm2
+```
+
+2. Back up and edit the templates registry:
+
+```bash
+sudo cp /usr/share/remarkable/templates/templates.json ~/templates.json.backup
+sudo nano /usr/share/remarkable/templates/templates.json
+# Append the JSON entry for your template (see your local `template.json`)
+```
+
+3. Copy the template file to the device and place it in a custom templates folder:
+
+```bash
+sudo mkdir -p /usr/share/remarkable/templates/my_templates/
+scp "path/to/LS Dotted S A4.template" rm2:/usr/share/remarkable/templates/my_templates/
+```
+
+4. Close any opened file and restart rm2 ui
+```bash
+systemctl restart xochitl
+```
+
+fast power shell command
+```
+scp "LS Dotted S A4.template" rm2:/usr/share/remarkable/templates/my_templates/; ssh rm2 "systemctl restart xochitl"
+```
+
 ## License
 
 GPL License. See `LICENSE` for details.

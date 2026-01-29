@@ -8,16 +8,24 @@ import threading
 import sys
 import math
 
-def split_pdf(input_pdf, output_pdf, header_height, footer_height, display_pages, progress_var, progress_label):
+# Default margins in millimetres used when the 'Use default margins' option is enabled
+# It takes the A4 remarkable template values and converts them to mm
+DEFAULT_MARGIN_MM = 0.0
+
+def split_pdf(input_pdf, output_pdf, header_height, footer_height, display_pages, progress_var, progress_label, use_default_margins=False):
     doc = fitz.open(input_pdf)
     output_doc = fitz.open()
 
     # Convert header/footer from mm to points (1 mm = 72 / 25.4 points)
     mm_to_pt = 72.0 / 25.4
-    header_height_pt = int(header_height * mm_to_pt)
-    footer_height_pt = int(footer_height * mm_to_pt)
+    if use_default_margins:
+        header_height_pt = DEFAULT_MARGIN_MM * mm_to_pt
+        footer_height_pt = DEFAULT_MARGIN_MM * mm_to_pt
+    else:
+        header_height_pt = header_height * mm_to_pt
+        footer_height_pt = footer_height * mm_to_pt
 
-    a4_width, a4_height = 595, 842 # A4 size in points
+    a4_width, a4_height = 595.0, 842.0 # A4 size in points
     content_height = a4_height - footer_height_pt - header_height_pt
     if content_height <= 0:
         messagebox.showerror("Error", "Header and footer are too large for an A4 page.")
@@ -35,8 +43,10 @@ def split_pdf(input_pdf, output_pdf, header_height, footer_height, display_pages
             page_width = page.rect.width
             page_height = page.rect.height
 
-            for y_offset in range(0, int(page_height), content_height):
-                for x_offset in range(0, int(page_width), a4_width):
+            y_offset = 0.0
+            while y_offset < page_height:
+                x_offset = 0.0
+                while x_offset < page_width:
                     crop_rect = fitz.Rect(x_offset, y_offset, min(x_offset + a4_width, page_width), min(y_offset + content_height, page_height))
                     crop_w = crop_rect.width
                     crop_h = crop_rect.height
@@ -60,6 +70,9 @@ def split_pdf(input_pdf, output_pdf, header_height, footer_height, display_pages
                     progress_label.config(text=f"{page_counter} page(s) done / {total_pages} total pages")
                     root.update_idletasks()
                     page_counter += 1
+
+                    x_offset += a4_width
+                y_offset += content_height
     
     output_doc.save(output_pdf)
     messagebox.showinfo("Success", f"PDF saved as {output_pdf}")
@@ -73,10 +86,10 @@ def drop_pdf(event):
     pdf_path.set(event.data.strip('{}'))
 
 def update_header_slider(value):
-    header_var.set(int(value))
+    header_var.set(float(value))
 
 def update_footer_slider(value):
-    footer_var.set(int(value))
+    footer_var.set(float(value))
 
 def threaded_process_pdf():
     input_file = pdf_path.get()
@@ -85,8 +98,23 @@ def threaded_process_pdf():
         return
     
     output_file = os.path.splitext(input_file)[0] + "_split.pdf"
-    thread = threading.Thread(target=split_pdf, args=(input_file, output_file, header_var.get(), footer_var.get(), display_var.get(), progress_var, progress_label))
+    thread = threading.Thread(target=split_pdf, args=(input_file, output_file, header_var.get(), footer_var.get(), display_var.get(), progress_var, progress_label, use_default_margins_var.get()))
     thread.start()
+
+def toggle_use_default_margins():
+    """Disable/enable header/footer inputs and set default values when enabled."""
+    if use_default_margins_var.get():
+        header_var.set(DEFAULT_MARGIN_MM)
+        footer_var.set(DEFAULT_MARGIN_MM)
+        state = 'disabled'
+    else:
+        state = 'normal'
+
+    # The widgets exist by the time this runs (called from UI), so it's safe to configure them
+    header_entry.config(state=state)
+    header_slider.config(state=state)
+    footer_entry.config(state=state)
+    footer_slider.config(state=state)
 
 # UI Setup
 root = TkinterDnD.Tk()
@@ -94,8 +122,9 @@ root.title("PDF Splitter")
 root.geometry("400x420")
 
 pdf_path = tk.StringVar()
-header_var = tk.IntVar(value=15)
-footer_var = tk.IntVar(value=15)
+header_var = tk.DoubleVar(value=DEFAULT_MARGIN_MM)
+footer_var = tk.DoubleVar(value=DEFAULT_MARGIN_MM)
+use_default_margins_var = tk.BooleanVar(value=True)
 display_var = tk.BooleanVar(value=False)
 progress_var = tk.DoubleVar()
 
@@ -112,15 +141,20 @@ header_label = tk.Label(root, text="Header Height (mm)")
 header_label.pack()
 header_entry = tk.Entry(root, textvariable=header_var, width=5)
 header_entry.pack()
-header_slider = tk.Scale(root, from_=0, to=200, orient="horizontal", variable=header_var, command=update_header_slider)
+header_slider = tk.Scale(root, from_=0.0, to=200.0, resolution=0.1, orient="horizontal", variable=header_var, command=update_header_slider)
 header_slider.pack()
 
 footer_label = tk.Label(root, text="Footer Height (mm)")
 footer_label.pack()
 footer_entry = tk.Entry(root, textvariable=footer_var, width=5)
 footer_entry.pack()
-footer_slider = tk.Scale(root, from_=0, to=200, orient="horizontal", variable=footer_var, command=update_footer_slider)
+footer_slider = tk.Scale(root, from_=0.0, to=200.0, resolution=0.1, orient="horizontal", variable=footer_var, command=update_footer_slider)
 footer_slider.pack()
+
+use_default_checkbox = tk.Checkbutton(root, text=f"Use default margins ({DEFAULT_MARGIN_MM} mm)", variable=use_default_margins_var, command=toggle_use_default_margins)
+use_default_checkbox.pack()
+# Apply the initial state so header/footer inputs are disabled at startup
+toggle_use_default_margins()
 
 display_checkbox = tk.Checkbutton(root, text="Display Page Numbers", variable=display_var)
 display_checkbox.pack()

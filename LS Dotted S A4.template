@@ -11,9 +11,9 @@
         {"magicOffset": 22},
         {"magicOffsetX": "paperOriginX - magicOffset"},
         {"offsetX": "templateWidth < mobileMaxWidth || templateHeight < mobileMaxWidth ? mobileOffsetX : magicOffsetX"},
-        {"a4height": 2642.59},
-        {"pageBreakOffset": 15},
-        {"pageBreak": "a4height-pageBreakOffset"}
+        {"A4HeightPoints": "(297*226)/25.4"},
+        {"A4magicOffsetPoints": "12.02"},
+        {"pageBreak": "A4HeightPoints+A4magicOffsetPoints"}
     ],
     "items": [
         {
