@@ -7,12 +7,49 @@ import os
 import threading
 import sys
 import math
+from tools import page_is_visually_blank 
 
 # Default margins in millimetres used when the 'Use default margins' option is enabled
 # It takes the A4 remarkable template values and converts them to mm
 DEFAULT_MARGIN_MM = 0.0
 
-def split_pdf(input_pdf, output_pdf, header_height, footer_height, display_pages, progress_var, progress_label, use_default_margins=False):
+
+class Tooltip:
+    def __init__(self, widget, text):
+        self.widget = widget
+        self.text = text
+        self.tip_window = None
+        widget.bind("<Enter>", self.show)
+        widget.bind("<Leave>", self.hide)
+
+    def show(self, event=None):
+        if self.tip_window is not None:
+            return
+
+        x = self.widget.winfo_rootx() + 20
+        y = self.widget.winfo_rooty() + self.widget.winfo_height() + 2
+        self.tip_window = tw = tk.Toplevel(self.widget)
+        tw.wm_overrideredirect(True)
+        tw.wm_geometry(f"+{x}+{y}")
+        label = tk.Label(
+            tw,
+            text=self.text,
+            justify="left",
+            background="#ffffe0",
+            relief="solid",
+            borderwidth=1,
+            wraplength=280,
+            padx=6,
+            pady=4,
+        )
+        label.pack()
+
+    def hide(self, event=None):
+        if self.tip_window is not None:
+            self.tip_window.destroy()
+            self.tip_window = None
+
+def split_pdf(input_pdf, output_pdf, header_height, footer_height, display_pages, progress_var, progress_label, rmBlank, use_default_margins=False):
     doc = fitz.open(input_pdf)
     output_doc = fitz.open()
 
@@ -38,7 +75,9 @@ def split_pdf(input_pdf, output_pdf, header_height, footer_height, display_pages
 
     tqdm_disabled = not sys.stdout  # Disable tqdm if there's no console (for release build)
 
-    with tqdm(total=total_pages, desc="Splitting PDF", unit="page", disable=tqdm_disabled) as pbar:
+    with tqdm(total=total_pages, desc="Processing PDF", unit="page", disable=tqdm_disabled) as pbar:
+        
+        # TODO: check if multithreading can be done (or if it causes havok with page ordering)
         for page in doc:
             page_width = page.rect.width
             page_height = page.rect.height
@@ -52,18 +91,27 @@ def split_pdf(input_pdf, output_pdf, header_height, footer_height, display_pages
                     crop_h = crop_rect.height
 
                     # Create A4 page and render the cropped region at its real size (avoid stretching).
-                    new_page = output_doc.new_page(width=a4_width, height=a4_height)
+                    new_page = output_doc.new_page(width=a4_width, height=a4_height) # create a new blank A4 page in the output PDF
 
                     # Center the crop horizontally and place it right below the header vertically
                     x_dest = (a4_width - crop_w) / 2
                     y_dest = header_height_pt
                     dest_rect = fitz.Rect(x_dest, y_dest, x_dest + crop_w, y_dest + crop_h)
 
-                    new_page.show_pdf_page(dest_rect, doc, page.number, clip=crop_rect)
-
-                    if display_pages:
+                    new_page.show_pdf_page(dest_rect, doc, page.number, clip=crop_rect) # copies the the clipped content to the blank A4 page
+                    
+                    blank = page_is_visually_blank(new_page)
+                    if blank:
+                        total_pages -= 1  # Decrement total_pages if a blank page is detected
+                        pageToRemove = page_counter -1
+                        print(f"\nPage {page_counter} is blank, it will be removed from the output PDF.")
+                        output_doc.delete_page(pageToRemove)
+                        page_counter -= 1  # Decrement page_counter to account for the removed page
+                    
+                    if not blank and display_pages:
                         text = f"Page {page_counter}/{total_pages}"
                         new_page.insert_text((a4_width / 2 - 20, a4_height - 20), text, fontsize=12, color=(0, 0, 0))
+
                     
                     pbar.update(1)
                     progress_var.set((page_counter / total_pages) * 100)
@@ -73,8 +121,9 @@ def split_pdf(input_pdf, output_pdf, header_height, footer_height, display_pages
 
                     x_offset += a4_width
                 y_offset += content_height
-    
+
     output_doc.save(output_pdf)
+    print("PDF processing completed.")
     messagebox.showinfo("Success", f"PDF saved as {output_pdf}")
 
 def browse_pdf():
@@ -98,7 +147,7 @@ def threaded_process_pdf():
         return
     
     output_file = os.path.splitext(input_file)[0] + "_split.pdf"
-    thread = threading.Thread(target=split_pdf, args=(input_file, output_file, header_var.get(), footer_var.get(), display_var.get(), progress_var, progress_label, use_default_margins_var.get()))
+    thread = threading.Thread(target=split_pdf, args=(input_file, output_file, header_var.get(), footer_var.get(), display_var.get(), progress_var, progress_label, remove_blank_pages_var.get() , use_default_margins_var.get()))
     thread.start()
 
 def toggle_use_default_margins():
@@ -119,7 +168,7 @@ def toggle_use_default_margins():
 # UI Setup
 root = TkinterDnD.Tk()
 root.title("PDF Splitter")
-root.geometry("400x420")
+root.geometry("400x460")
 
 pdf_path = tk.StringVar()
 header_var = tk.DoubleVar(value=DEFAULT_MARGIN_MM)
@@ -158,6 +207,15 @@ toggle_use_default_margins()
 
 display_checkbox = tk.Checkbutton(root, text="Display Page Numbers", variable=display_var)
 display_checkbox.pack()
+
+remove_blank_pages_var = tk.BooleanVar(value=True)
+remove_blank_pages_frame = tk.Frame(root)
+remove_blank_pages_frame.pack(pady=2)
+remove_blank_pages_checkbox = tk.Checkbutton(remove_blank_pages_frame, text="Remove blank pages", variable=remove_blank_pages_var)
+remove_blank_pages_checkbox.pack(side="left")
+remove_blank_pages_help = tk.Label(remove_blank_pages_frame, text="?", fg="blue", cursor="question_arrow")
+remove_blank_pages_help.pack(side="left", padx=(6, 0))
+Tooltip(remove_blank_pages_help, "When enabled, blank pages created during the splitting process will be removed from the output PDF.")
 
 progress_bar = ttk.Progressbar(root, variable=progress_var, maximum=100)
 progress_bar.pack(pady=5, fill='x')
