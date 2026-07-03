@@ -108,11 +108,6 @@ def split_pdf(input_pdf, output_pdf, header_height, footer_height, display_pages
                         output_doc.delete_page(pageToRemove)
                         page_counter -= 1  # Decrement page_counter to account for the removed page
                     
-                    if not blank and display_pages:
-                        text = f"Page {page_counter}/{total_pages}"
-                        new_page.insert_text((a4_width / 2 - 20, a4_height - 20), text, fontsize=12, color=(0, 0, 0))
-
-                    
                     pbar.update(1)
                     progress_var.set((page_counter / total_pages) * 100)
                     progress_label.config(text=f"{page_counter} page(s) done / {total_pages} total pages")
@@ -121,6 +116,17 @@ def split_pdf(input_pdf, output_pdf, header_height, footer_height, display_pages
 
                     x_offset += a4_width
                 y_offset += content_height
+
+    total_pages = len(output_doc)
+    if display_pages:
+        for page_num, page in enumerate(output_doc, start=1):
+                text = f"{page_num}/{total_pages}"
+                page.insert_text(
+                    (a4_width / 2 - 20, a4_height - 20),
+                    text,
+                    fontsize=12,
+                    color=(0, 0, 0),
+                )
 
     output_doc.save(output_pdf)
     print("PDF processing completed.")
