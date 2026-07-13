@@ -1,0 +1,7 @@
+.venv
+dist
+build
+test.py
+__pycache__
+login.json
+logs/

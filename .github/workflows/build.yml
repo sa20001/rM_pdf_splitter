@@ -1,0 +1,69 @@
+name: Build EXE and Release
+
+on:
+  workflow_dispatch:  # For manual trigger from GitHub Actions UI
+  push:
+    tags:
+      - "v*.*.*"  # Triggers when a tag like v1.0.0 is pushed
+
+jobs:
+  build:
+    runs-on: windows-latest  # Use Windows to compile the EXE
+    permissions:
+      contents: write  # This allows GitHub Actions to create releases
+
+    steps:
+      - name: Checkout Repository
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v4
+        with:
+          python-version: "3.10.11"
+
+      - name: Install Dependencies
+        run: |
+          python -m venv .venv
+          .venv\Scripts\activate
+          python -m pip install --upgrade pip
+          pip install -r requirements.txt
+          pip install pyinstaller
+        shell: pwsh
+
+      - name: Build EXE using .spec file
+        run: |
+          .venv\Scripts\activate
+          pyinstaller pdf_splitter.spec
+          Get-ChildItem -Path dist -Recurse
+        shell: pwsh
+
+      - name: Rename EXE with tag
+        run: |
+          Rename-Item -Path dist/pdf_splitter.exe -NewName "rm_splitter_${{ github.ref_name }}.exe"
+        shell: pwsh
+
+      - name: Upload EXE as Artifact
+        uses: actions/upload-artifact@v4
+        with:
+          if-no-files-found: error
+          name: rm_splitter_${{ github.ref_name }}
+          path: dist/rm_splitter_${{ github.ref_name }}.exe
+
+      - name: Create GitHub Release
+        id: create_release
+        run: |
+          gh release create "${{ github.ref_name }}" --title "Release ${{ github.ref_name }}" --notes "Automated release"
+          echo "upload_url=$(gh api repos/${{ github.repository }}/releases/tags/${{ github.ref_name }} --jq '.upload_url')" >> $GITHUB_OUTPUT
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        shell: bash
+
+      - name: Upload EXE to Release
+        uses: actions/upload-release-asset@v1
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        with:
+          upload_url: ${{ steps.create_release.outputs.upload_url }}
+          asset_path: dist/rm_splitter_${{ github.ref_name }}.exe
+          asset_name: rm_splitter_${{ github.ref_name }}.exe
+          asset_content_type: application/octet-stream

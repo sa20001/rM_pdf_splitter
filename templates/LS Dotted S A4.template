@@ -1,0 +1,74 @@
+{
+    "name": "Dots small A4",
+    "author": "reMarkable",
+    "templateVersion": "1.0.0",
+    "formatVersion": 1,
+    "categories": ["Creative", "Grids"],
+    "orientation": "portrait",
+    "constants": [
+        {"mobileMaxWidth": 1000},
+        {"mobileOffsetX": 5.5},
+        {"magicOffset": 22},
+        {"magicOffsetX": "paperOriginX - magicOffset"},
+        {"offsetX": "templateWidth < mobileMaxWidth || templateHeight < mobileMaxWidth ? mobileOffsetX : magicOffsetX"},
+        {"A4HeightPoints": "(297*226)/25.4"},
+        {"A4magicOffsetPoints": "12.02"},
+        {"pageBreak": "A4HeightPoints+A4magicOffsetPoints"}
+    ],
+    "items": [
+        {
+            "type": "group",
+            "boundingBox": {
+                "x": "offsetX + 1",
+                "y": 0,
+                "width": 42.5,
+                "height": 42.5
+            },
+            "repeat": {
+                "columns": "infinite",
+                "rows": "infinite"
+            },
+            "children": [
+                {
+                    "type": "path",
+                    "strokeWidth": 1,
+                    "fillColor": "#000000",
+                    "antialiasing": false,
+                    "data": [
+                        "M", 0, 0,
+                        "L", 1, 0,
+                        "L", 1, 1,
+                        "L", 0, 1,
+                        "Z"
+                    ]
+                }
+            ]
+        },
+        {
+            "type": "group",
+            "boundingBox": {
+                "x": 0,
+                "y": "pageBreak",
+                "width": "templateWidth",
+                "height": "pageBreak"
+            },
+            "repeat": {
+                "rows": "down"
+            },
+            "children": [
+                {
+                    "type": "path",
+                    "strokeWidth": 1,
+                    "fillColor": "#000000",
+                    "antialiasing": false,
+                    "data": [
+                        "M", 0, 0, "L", "parentWidth", 0,
+                        "M", 0, 2, "L", "parentWidth", 2,
+                        "M", 0, 4, "L", "parentWidth", 4,
+                        "M", 0, 6, "L", "parentWidth", 6
+                        ]
+                }
+            ]
+        }
+    ]
+}
