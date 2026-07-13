@@ -66,17 +66,6 @@ To avoid having to find the IP address of your reMarkable device every time:
   </tr>
 </table>
 
-<script>
-  window.onload = function() {
-    let img1 = document.getElementById("img1");
-    let img2 = document.getElementById("img2");
-
-    img1.style.height = img2.clientHeight + "px";
-    img1.style.width = "auto";
-  };
-</script>
-
-
 ## Contributing
 
 To contribute:
